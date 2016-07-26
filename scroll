@@ -1,0 +1,29 @@
+os.loadAPI("lib/pix")
+
+font = pix.loadFont("font/fancy.fnt")
+
+local x, y = 10, 10
+local vx, vy = 1, 1
+
+local w, h = pix.getSize()
+
+while true do
+  x = x+vx
+  y = y+vy
+  if x==0 then
+    vx = 1
+  end
+  if x+33==w then
+    vx = -1
+  end
+  if y==0 then
+    vy = 1
+  end
+  if y+9==h then
+    vy = -1
+  end
+  pix.clear()
+  pix.writeText(x, y, font, "Hello!")
+  pix.redraw()
+  sleep(0.01)
+end

@@ -1,0 +1,11 @@
+os.loadAPI("lib/pix")
+
+fnt = pix.loadFont("font/fancy.fnt")
+
+pix.writeText(2, 3, fnt, "abcdefghijklm")
+pix.writeText(2, 15, fnt, "nopqrstuvwxy")
+pix.writeText(2, 27, fnt, "z.?!#")
+pix.writeText(2, 39, fnt, "Penis dick")
+
+pix.redraw()
+os.pullEvent("key")

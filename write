@@ -1,0 +1,35 @@
+local str = {...}
+if #str<1 then
+  print("Usage: "..shell.getRunningProgram().." fontname text...")
+  return
+end
+
+local found = ""
+
+local function look(path)
+  if fs.exists(path) then
+    found = path
+  end
+  if fs.exists(path..".fnt") then
+    found = path..".fnt"
+  end
+end
+
+local p = str[1]
+
+look(p)
+look("font/"..p)
+look(shell.dir().."/"..p)
+look(shell.dir().."/font/"..p)
+
+if found=="" then
+  print("Font not found")
+  return
+end
+
+os.loadAPI("lib/pix")
+local font = pix.loadFont(found)
+for i=2, #str do
+  pix.writeText(2, (font.height+1)*(i-1)-6, font, str[i])
+end
+pix.redraw()

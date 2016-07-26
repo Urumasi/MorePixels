@@ -1,0 +1,227 @@
+-- BASE PIXEL SHIT
+
+do
+  local scr = {}
+  local w, h = term.getSize()
+  local pw, ph = w*2, h*3
+  
+  for x=0, w-1 do
+    scr[x] = {}
+    for y=0, h-1 do
+      scr[x][y] = {128, colors.white, colors.black}
+    end
+  end
+  
+  function getSize()
+    return pw, ph
+  end
+
+  function setTextColor(x, y, nColor)
+    scr[x][y][2] = nColor
+  end
+
+  function setBackgroundColor(x, y, nColor)
+    scr[x][y][3] = nColor
+  end
+
+  function setAllTextColor(nColor)
+    for i=0, w-1 do
+      for j=0, h-1 do
+        scr[i][j][2] = nColor
+      end
+    end
+  end
+
+  function setAllBackgroundColor(nColor)
+    for i=0, w-1 do
+      for j=0, h-1 do
+        scr[i][j][3] = nColor
+      end
+    end
+  end
+
+  function setSubChar(x1, y1, x2, y2, bOn)
+    local n = x2+y2*2
+    if n<0 then n=0 end
+    if n>5 then n=5 end
+    local c = scr[x1][y1]
+    local a = bit32.band(c[1], 128+2^n)-128
+    if a==0 and bOn then
+      c[1] = c[1]+2^n
+    elseif a==1 and not bOn then
+      c[1] = c[1]-2^n
+    end
+  end
+
+  function getSubChar(x1, y1, x2, y2)
+    local n = x2+y2*2
+    if n<0 then n=0 end
+    if n>5 then n=5 end
+    local c = scr[x1][y1]
+    return bit32.band(c[1], 2^n)~=0
+  end
+
+  function clear()
+    scr = {}
+    for x=0, w-1 do
+      scr[x] = {}
+      for y=0, h-1 do
+        scr[x][y] = {128, colors.white, colors.black}
+      end
+    end
+  end
+
+  function setPixel(x, y, bOn)
+    if x<0 or y<0 or x>=pw or y>=ph then return end
+    local ax, ay = math.floor(x/2), math.floor(y/3)
+    setSubChar(ax, ay, x-2*ax, y-3*ay, bOn)
+  end
+
+  function getPixel(x, y)
+    if x<0 or y<0 or x>=pw or y>=ph then return false end
+    local ax, ay = math.floor(x/2), math.floor(y/3)
+    return getSubChar(ax, ay, x-2*ax, y-3*ay)
+  end
+
+  function redrawChar(x, y)
+    term.setCursorPos(x+1, y+1)
+    local c = scr[x][y]
+    if c[1]>=160 then -- bottom right pixel is on
+      term.setTextColor(c[3])
+      term.setBackgroundColor(c[2])
+      write(string.char(319-c[1]))
+    else
+      term.setTextColor(c[2])
+      term.setBackgroundColor(c[3])
+      write(string.char(c[1]))
+    end
+  end
+
+  function redraw()
+    for y=0, h-1 do
+      term.setCursorPos(1, y+1)
+      for x=0, w-1 do
+        local c = scr[x][y]
+        if c[1]>=160 then -- bottom right pixel is on
+          term.setTextColor(c[3])
+          term.setBackgroundColor(c[2])
+          write(string.char(319-c[1]))
+        else
+          term.setTextColor(c[2])
+          term.setBackgroundColor(c[3])
+          write(string.char(c[1]))
+        end
+      end
+    end
+  end
+
+  function redrawSection(x1, y1, x2, y2)
+    for y=y1-1, y2-1 do
+      term.setCursorPos(x1, y+1)
+      for x=x1-1, x2-1 do
+        local c = scr[x][y]
+        if c[1]>=160 then -- bottom right pixel is on
+          term.setTextColor(c[3])
+          term.setBackgroundColor(c[2])
+          write(string.char(319-c[1]))
+        else
+          term.setTextColor(c[2])
+          term.setBackgroundColor(c[3])
+          write(string.char(c[1]))
+        end
+      end
+    end
+  end
+end
+
+-- SHAPE SHIT
+
+do
+  function drawLine(x1, y1, x2, y2)
+    local dx, dy = x2-x1, y2-y1
+  end
+  
+  function drawRect(x1, y1, x2, y2)
+    for x=x1, x2 do
+      setPixel(x, y1, true)
+      setPixel(x, y2, true)
+    end
+    for y=y1+1, y2-1 do
+      setPixel(x1, y, true)
+      setPixel(x2, y, true)
+    end
+  end
+  
+  function fillRect(x1, y1, x2, y2)
+    for x=x1, x2 do
+      for y=y1, y2 do
+        setPixel(x, y, true)
+      end
+    end
+  end
+
+  function drawCircle(x, y, r, segments)
+    local segments = segments or 180
+    for i=0, segments-1 do
+      local a = math.pi*2*i/segments
+      setPixel(x+math.floor(math.cos(a)*r+0.5), y+math.floor(math.sin(a)*r+0.5), true)
+    end
+  end
+
+  function fillCircle(x, y, r)
+    for x1=x-r, x+r do
+      for y1=y-r, y+r do
+        if math.sqrt((x1-x)^2 + (y1-y)^2)<=r then
+          setPixel(x1, y1, true)
+        end
+      end
+    end
+  end
+end
+
+-- FONT SHIT
+
+do
+  function loadFont(sPath)
+    if not fs.exists(sPath) then error("No such file!") end
+    if fs.isDir(sPath) then error("Path is a directory!") end
+    local f = fs.open(sPath, "r")    
+
+    local font = {}
+    local line = f.readLine()
+    local p = line:find(";")
+    font.height = tonumber(line:sub(1, p-1))
+    font.space = tonumber(line:sub(p+1))
+    if not font.height or not font.space then error("Malformed data!") end
+
+    while true do
+      local line = f.readLine()
+      if line=="" or line==nil then break end
+      local p = line:find(";")
+      local p2 = line:find(";", p+1)
+      local c = string.char(tonumber(line:sub(1, p-1)))
+      font[c] = {width = tonumber(line:sub(p+1,p2-1))}
+      line:sub(p2+1):gsub("(%d-);", function(v) font[c][#font[c]+1] = tonumber(v) end)
+      if #font[c]~=font.height then error("Malformed data! ("..c..")") end
+    end
+
+    f.close()
+    return font
+  end
+
+  function writeText(x, y, tFont, sText)
+    local cx = x
+    for _=1, #sText do
+      local c = sText:sub(_,_)
+      if not tFont[c] then
+        c = "?"
+      end
+      for i=1, tFont.height do
+        for j=1, tFont[c].width do
+          setPixel(cx+j-1, y+i-1, bit32.band(tFont[c][i], 2^(tFont[c].width-j))~=0)
+        end
+      end
+      cx = cx+tFont[c].width+tFont.space
+    end
+  end
+end
